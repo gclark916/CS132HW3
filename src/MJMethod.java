@@ -5,9 +5,10 @@ import java.util.Map;
 
 public class MJMethod 
 {
-	List<Map<String, String>> parameters;
-	String returnType;
-	String name;
+	public List<Map<String, String>> parameters;
+	public String returnType;
+	public String name;
+	public int methodTableIndex;
 	
 	/**
 	 * @param parameterTypes

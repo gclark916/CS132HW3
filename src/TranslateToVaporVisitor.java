@@ -1,4 +1,5 @@
 import java.util.Enumeration;
+import java.util.List;
 import java.util.Map;
 
 import syntaxtree.AllocationExpression;
@@ -381,14 +382,23 @@ public class TranslateToVaporVisitor extends GJDepthFirst<Object, Object>
 	    * f6 -> Statement()
 	    */
 	   public Object visit(IfStatement n, Object argu) {
-	      Object _ret=null;
-	      n.f0.accept(this, argu);
-	      n.f1.accept(this, argu);
-	      n.f2.accept(this, argu);
-	      n.f3.accept(this, argu);
-	      n.f4.accept(this, argu);
-	      n.f5.accept(this, argu);
-	      n.f6.accept(this, argu);
+		   ExpressionInput input = (ExpressionInput) argu;
+	      ExpressionOutput e1 = (ExpressionOutput) n.f2.accept(this, input);
+	      
+	      input.nextVariableIndex = e1.nextVariableIndex;
+	      StatementOutput s1 = (StatementOutput) n.f4.accept(this, argu);
+	      
+	      input.nextVariableIndex = s1.nextVariableIndex;
+	      StatementOutput s2 = (StatementOutput) n.f6.accept(this, input);
+	      
+	      String ifNum = Integer.toString(s2.nextVariableIndex);
+	      String condCheck = "if0 " + e1.expressionVariable +" goto :if" + ifNum + "_else\n";
+	      String gotoEnd = "goto :if" + ifNum + "_end\n";
+	      String elseLabel = "if" + ifNum + "_else:\n";
+	      String endLabel = "if" + ifNum + "end:\n";
+	      String code = e1.code + condCheck + s1.code + gotoEnd + elseLabel + s2.code + endLabel;
+	      
+	      StatementOutput _ret = new StatementOutput(code, s2.nextVariableIndex+1);
 	      return _ret;
 	   }
 
@@ -400,12 +410,20 @@ public class TranslateToVaporVisitor extends GJDepthFirst<Object, Object>
 	    * f4 -> Statement()
 	    */
 	   public Object visit(WhileStatement n, Object argu) {
-	      Object _ret=null;
-	      n.f0.accept(this, argu);
-	      n.f1.accept(this, argu);
-	      n.f2.accept(this, argu);
-	      n.f3.accept(this, argu);
-	      n.f4.accept(this, argu);
+		   ExpressionInput input = (ExpressionInput) argu;
+	      ExpressionOutput e1 = (ExpressionOutput) n.f2.accept(this, input);
+	      
+	      input.nextVariableIndex = e1.nextVariableIndex;
+	      StatementOutput s1 = (StatementOutput) n.f4.accept(this, input);
+	      
+	      String whileNum = Integer.toString(s1.nextVariableIndex);
+	      String whileTop = "while" + whileNum  + "_top:\n";
+	      String condCheck = "if0 " + e1.expressionVariable + " goto :while" + whileNum + "_end\n";
+	      String loopToTop = "goto :while" + whileNum + "_top\n";
+	      String whileEnd = "while" + whileNum + "_end:\n";
+	      String code = whileTop + e1.code + condCheck + s1.code + loopToTop + whileEnd;
+	      
+	      StatementOutput _ret = new StatementOutput(code, s1.nextVariableIndex+1);
 	      return _ret;
 	   }
 
@@ -417,12 +435,12 @@ public class TranslateToVaporVisitor extends GJDepthFirst<Object, Object>
 	    * f4 -> ";"
 	    */
 	   public Object visit(PrintStatement n, Object argu) {
-	      Object _ret=null;
-	      n.f0.accept(this, argu);
-	      n.f1.accept(this, argu);
-	      n.f2.accept(this, argu);
-	      n.f3.accept(this, argu);
-	      n.f4.accept(this, argu);
+		   ExpressionInput input = (ExpressionInput) argu;
+	      ExpressionOutput e = (ExpressionOutput) n.f2.accept(this, input);
+	      String printVariable = "t" + Integer.toString(e.nextVariableIndex);
+	      String line = "PrintIntS(" + printVariable + ")\n";
+	      String code = e.code + line;
+	      StatementOutput _ret = new StatementOutput(code, e.nextVariableIndex+1);
 	      return _ret;
 	   }
 
@@ -438,7 +456,8 @@ public class TranslateToVaporVisitor extends GJDepthFirst<Object, Object>
 	    *       | PrimaryExpression()
 	    */
 	   public Object visit(Expression n, Object argu) {
-	      ExpressionOutput _ret = (ExpressionOutput) n.f0.accept(this, argu);
+		   ExpressionInput input = (ExpressionInput) argu;
+	      ExpressionOutput _ret = (ExpressionOutput) n.f0.accept(this, input);
 	      return _ret;
 	   }
 
@@ -447,12 +466,20 @@ public class TranslateToVaporVisitor extends GJDepthFirst<Object, Object>
 	    * f1 -> "&&"
 	    * f2 -> PrimaryExpression()
 	    */
+	   // nonzero is true, 0 is false. Multiply is same as &&
 	   public Object visit(AndExpression n, Object argu) {
-	      Object _ret=null;
-	      n.f0.accept(this, argu);
-	      n.f1.accept(this, argu);
-	      n.f2.accept(this, argu);
-	      return _ret;
+		   ExpressionInput input = (ExpressionInput) argu;
+		      ExpressionOutput e1 = (ExpressionOutput) n.f0.accept(this, input);
+		      
+		      input.nextVariableIndex = e1.nextVariableIndex;
+		      ExpressionOutput e2 = (ExpressionOutput) n.f2.accept(this, input);
+		      
+		      String expressionVariable = "t" + e2.nextVariableIndex;
+		      String line1 = expressionVariable + " = Mul(" + e1.expressionVariable + " " + e2.expressionVariable + ")\n";
+		      String code = e1.code + e2.code + line1;
+		      
+		      ExpressionOutput _ret = new ExpressionOutput(expressionVariable, code, e2.nextVariableIndex+1);
+		      return _ret;
 	   }
 
 	   /**
@@ -461,11 +488,18 @@ public class TranslateToVaporVisitor extends GJDepthFirst<Object, Object>
 	    * f2 -> PrimaryExpression()
 	    */
 	   public Object visit(CompareExpression n, Object argu) {
-	      Object _ret=null;
-	      n.f0.accept(this, argu);
-	      n.f1.accept(this, argu);
-	      n.f2.accept(this, argu);
-	      return _ret;
+		   ExpressionInput input = (ExpressionInput) argu;
+		      ExpressionOutput e1 = (ExpressionOutput) n.f0.accept(this, input);
+		      
+		      input.nextVariableIndex = e1.nextVariableIndex;
+		      ExpressionOutput e2 = (ExpressionOutput) n.f2.accept(this, input);
+		      
+		      String expressionVariable = "t" + e2.nextVariableIndex;
+		      String line1 = expressionVariable + " = LtS(" + e1.expressionVariable + " " + e2.expressionVariable + ")\n";
+		      String code = e1.code + e2.code + line1;
+		      
+		      ExpressionOutput _ret = new ExpressionOutput(expressionVariable, code, e2.nextVariableIndex+1);
+		      return _ret;
 	   }
 
 	   /**
@@ -474,11 +508,18 @@ public class TranslateToVaporVisitor extends GJDepthFirst<Object, Object>
 	    * f2 -> PrimaryExpression()
 	    */
 	   public Object visit(PlusExpression n, Object argu) {
-	      Object _ret=null;
-	      n.f0.accept(this, argu);
-	      n.f1.accept(this, argu);
-	      n.f2.accept(this, argu);
-	      return _ret;
+		   ExpressionInput input = (ExpressionInput) argu;
+		      ExpressionOutput e1 = (ExpressionOutput) n.f0.accept(this, input);
+		      
+		      input.nextVariableIndex = e1.nextVariableIndex;
+		      ExpressionOutput e2 = (ExpressionOutput) n.f2.accept(this, input);
+		      
+		      String expressionVariable = "t" + e2.nextVariableIndex;
+		      String line1 = expressionVariable + " = Add(" + e1.expressionVariable + " " + e2.expressionVariable + ")\n";
+		      String code = e1.code + e2.code + line1;
+		      
+		      ExpressionOutput _ret = new ExpressionOutput(expressionVariable, code, e2.nextVariableIndex+1);
+		      return _ret;
 	   }
 
 	   /**
@@ -487,11 +528,18 @@ public class TranslateToVaporVisitor extends GJDepthFirst<Object, Object>
 	    * f2 -> PrimaryExpression()
 	    */
 	   public Object visit(MinusExpression n, Object argu) {
-	      Object _ret=null;
-	      n.f0.accept(this, argu);
-	      n.f1.accept(this, argu);
-	      n.f2.accept(this, argu);
-	      return _ret;
+		   ExpressionInput input = (ExpressionInput) argu;
+		      ExpressionOutput e1 = (ExpressionOutput) n.f0.accept(this, input);
+		      
+		      input.nextVariableIndex = e1.nextVariableIndex;
+		      ExpressionOutput e2 = (ExpressionOutput) n.f2.accept(this, input);
+		      
+		      String expressionVariable = "t" + e2.nextVariableIndex;
+		      String line1 = expressionVariable + " = Sub(" + e1.expressionVariable + " " + e2.expressionVariable + ")\n";
+		      String code = e1.code + e2.code + line1;
+		      
+		      ExpressionOutput _ret = new ExpressionOutput(expressionVariable, code, e2.nextVariableIndex+1);
+		      return _ret;
 	   }
 
 	   /**
@@ -500,9 +548,17 @@ public class TranslateToVaporVisitor extends GJDepthFirst<Object, Object>
 	    * f2 -> PrimaryExpression()
 	    */
 	   public Object visit(TimesExpression n, Object argu) {
-	      Object _ret=null;
-	      n.f0.accept(this, argu);
-	      n.f2.accept(this, argu);
+		   ExpressionInput input = (ExpressionInput) argu;
+	      ExpressionOutput e1 = (ExpressionOutput) n.f0.accept(this, input);
+	      
+	      input.nextVariableIndex = e1.nextVariableIndex;
+	      ExpressionOutput e2 = (ExpressionOutput) n.f2.accept(this, input);
+	      
+	      String expressionVariable = "t" + e2.nextVariableIndex;
+	      String line1 = expressionVariable + " = Mul(" + e1.expressionVariable + " " + e2.expressionVariable + ")\n";
+	      String code = e1.code + e2.code + line1;
+	      
+	      ExpressionOutput _ret = new ExpressionOutput(expressionVariable, code, e2.nextVariableIndex+1);
 	      return _ret;
 	   }
 
@@ -513,11 +569,26 @@ public class TranslateToVaporVisitor extends GJDepthFirst<Object, Object>
 	    * f3 -> "]"
 	    */
 	   public Object visit(ArrayLookup n, Object argu) {
-	      Object _ret=null;
-	      n.f0.accept(this, argu);
-	      n.f1.accept(this, argu);
-	      n.f2.accept(this, argu);
-	      n.f3.accept(this, argu);
+		  // TODO: add an if-stmt to check for valid array access?
+		  ExpressionInput input = (ExpressionInput) argu;
+	      ExpressionOutput e1 = (ExpressionOutput) n.f0.accept(this, input);
+	      
+	      input.nextVariableIndex = e1.nextVariableIndex;
+	      ExpressionOutput e2 = (ExpressionOutput) n.f2.accept(this, input);
+	      
+	      String arrayAddrVariable = e1.expressionVariable;
+	      String indexVariable = e2.expressionVariable;
+	      String offsetVariable = "t" + Integer.toString(e2.nextVariableIndex);
+	      String actualAddrVariable = "t" + Integer.toString(e2.nextVariableIndex+1);
+	      
+	      // calculate the address
+	      String line1 = offsetVariable + " = Mul(" + indexVariable + " 4)\n"; 
+	      String line2 = actualAddrVariable + " = Add(" + arrayAddrVariable + " " + offsetVariable + ")\n";
+	      String expressionVariable = "[" + actualAddrVariable + "]";
+	      
+	      String code = e1.code + e2.code + line1 + line2;
+	      
+	      ExpressionOutput _ret = new ExpressionOutput(expressionVariable, code, e2.nextVariableIndex+2);
 	      return _ret;
 	   }
 
@@ -543,12 +614,53 @@ public class TranslateToVaporVisitor extends GJDepthFirst<Object, Object>
 	    * f4 -> ( ExpressionList() )?
 	    * f5 -> ")"
 	    */
+	   //TODO: not finished with this method
 	   public Object visit(MessageSend n, Object argu) {
-	      Object _ret=null;
-	      //TODO: need to keep a map of variable names -> object Types, prob both in ExpressionInput and ExpressionOutput (not sure about output)
-	      n.f0.accept(this, argu);
-	      n.f2.accept(this, argu);
-	      n.f4.accept(this, argu);
+	      ExpressionInput input = (ExpressionInput) argu;
+	      String methodName = n.f2.f0.tokenImage;
+	      
+	      ExpressionOutput e1 = (ExpressionOutput) n.f0.accept(this, input);
+	      String objectVariable = e1.expressionVariable;
+	      
+	      input.nextVariableIndex = e1.nextVariableIndex;
+	      List<ExpressionOutput> el = (List<ExpressionOutput>) n.f4.accept(this, input);
+	      
+	      int nextVarIndex = e1.nextVariableIndex;
+	      StringBuilder codeBuilder = new StringBuilder(e1.code);
+	      codeBuilder.append("\n");
+	      
+	      // Add code for parameters
+	      for (ExpressionOutput e_i : el)
+	      {
+	    	  codeBuilder.append(e_i.code);
+	    	  codeBuilder.append("\n");
+	    	  nextVarIndex = e_i.nextVariableIndex;
+	      }
+	      
+	      // Assign method table addr to a variable
+	      String methodTableAddr = "t" + Integer.toString(nextVarIndex);
+	      String line1 = methodTableAddr + " = [" + e1.expressionVariable + "]\n";
+	      
+	      // Assign method addr to a variable
+	      String methodAddr = methodTableAddr;
+	      int methodIndex = input.variableTypes.get(key)
+	      String line2 = methodAddr + " = [" + methodTableAddr + "+" + Integer.toString(i)
+	      
+	      // Add call line
+	      codeBuilder.append(returnVar);
+	      codeBuilder.append(" = ")
+	      // Build parameter list for call
+	      StringBuilder paramBuilder = new StringBuilder(objectVariable);
+	      for (ExpressionOutput paramExpr : el)
+	      {
+	    	  paramBuilder.append(" ");
+	    	  paramBuilder.append(paramExpr.expressionVariable);
+	    	  returnVar = 
+	      }
+	      String parameters = paramBuilder.toString();
+	      
+	      String returnVar = "t" + 
+	      String callLine = returnVar = call
 	      return _ret;
 	   }
 
@@ -559,8 +671,9 @@ public class TranslateToVaporVisitor extends GJDepthFirst<Object, Object>
 	   public Object visit(ExpressionList n, Object argu) {
 		   ExpressionInput input = (ExpressionInput) argu;
 	      ExpressionOutput e1 = (ExpressionOutput) n.f0.accept(this, input);
-	      ExpressionInput exprRestInput = new ExpressionInput(e1.nextVariableIndex);
-	      ExpressionOutput _ret = (ExpressionOutput) n.f1.accept(this, exprRestInput);
+	      
+	      input.nextVariableIndex = e1.nextVariableIndex;
+	      ExpressionOutput _ret = (ExpressionOutput) n.f1.accept(this, input);
 	      return _ret;
 	   }
 
@@ -644,13 +757,14 @@ public class TranslateToVaporVisitor extends GJDepthFirst<Object, Object>
 	    * f3 -> Expression()
 	    * f4 -> "]"
 	    */
+	   // TODO: save length to mem
 	   public Object visit(ArrayAllocationExpression n, Object argu) {
 		   ExpressionInput input = (ExpressionInput) argu;
 	      ExpressionOutput e = (ExpressionOutput) n.f3.accept(this, input);
 	      String allocSizeVariable = e.expressionVariable;
 	      String arrayAddrVariable = "t" + Integer.toString(e.nextVariableIndex);
-	      String line1 = arrayAddrVariable + " = HeapAllocZ(" + allocSizeVariable + ")";
-	      String newCode = e.code + "\n" + line1;
+	      String line1 = arrayAddrVariable + " = HeapAllocZ(" + allocSizeVariable + ")\n";
+	      String newCode = e.code + line1;
 	      
 	      ExpressionOutput _ret = new ExpressionOutput(arrayAddrVariable, newCode, e.nextVariableIndex + 1);
 	      return _ret;
@@ -667,11 +781,12 @@ public class TranslateToVaporVisitor extends GJDepthFirst<Object, Object>
 	      String objectAddrVariable = "t" + Integer.toString(input.nextVariableIndex);
 	      String className = n.f1.f0.tokenImage;
 	      MJClass mjclass = classes.get(className);
-	      // TODO: may need to alloc space for method pointers, or just always alloc at least 4 so that return val is not null
-	      int size = 4 * mjclass.getFields().size();
-	      String line1 = objectAddrVariable + " = HeapAllocZ(" + size + ")";
+	      int size = 4 * mjclass.getFields().size() + 4;
+	      String line1 = objectAddrVariable + " = HeapAllocZ(" + size + ")\n";
+	      String line2 = "[" + objectAddrVariable + "] = :vmt_" + className + "\n";
+	      String code = line1 + line2;
 	      
-	      ExpressionOutput _ret = new ExpressionOutput(objectAddrVariable, line1, input.nextVariableIndex + 1);
+	      ExpressionOutput _ret = new ExpressionOutput(objectAddrVariable, code, input.nextVariableIndex + 1);
 	      return _ret;
 	   }
 
@@ -683,8 +798,8 @@ public class TranslateToVaporVisitor extends GJDepthFirst<Object, Object>
 		   ExpressionInput input = (ExpressionInput) argu;
 	      ExpressionOutput e = (ExpressionOutput) n.f1.accept(this, input);
 	      String newVariable = "t" + Integer.toString(e.nextVariableIndex);
-	      String line1 = newVariable + " = Eq(" + e.expressionVariable + " 0)";
-	      String newCode = e.code + "\n" + line1;
+	      String line1 = newVariable + " = Eq(" + e.expressionVariable + " 0)\n";
+	      String newCode = e.code + line1;
 	      
 	      ExpressionOutput _ret = new ExpressionOutput(newVariable, newCode, e.nextVariableIndex+1);
 	      return _ret;
@@ -699,8 +814,8 @@ public class TranslateToVaporVisitor extends GJDepthFirst<Object, Object>
 		   ExpressionInput input = (ExpressionInput) argu;
 	      ExpressionOutput e = (ExpressionOutput) n.f1.accept(this, input);
 	      String newVariable = "t" + Integer.toString(e.nextVariableIndex);
-	      String line1 = newVariable + " = " + e.expressionVariable;
-	      String newCode = e.code + "\n" + line1;
+	      String line1 = newVariable + " = " + e.expressionVariable + "\n";
+	      String newCode = e.code + line1;
 	      
 	      ExpressionOutput _ret = new ExpressionOutput(newVariable, newCode, e.nextVariableIndex+1);
 	      return _ret;
