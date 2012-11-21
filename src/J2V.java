@@ -10,10 +10,9 @@ public class J2V {
 	public static void main(String [] args) 
 	{
 		try {
-			FileInputStream fileInput = new FileInputStream("test/test8.java");
+			FileInputStream fileInput = new FileInputStream("test/test5.java");
 			System.setIn(fileInput);
 			Node root = new MiniJavaParser(System.in).Goal();
-			//System.out.println("Program parsed successfully");
 
 			PopulateClassesVisitor firstPass = new PopulateClassesVisitor();
 			Map<String, MJClass> noIndicesOrParentsClassMap = (Map<String, MJClass>) root.accept(firstPass, null);
