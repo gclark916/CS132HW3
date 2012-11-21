@@ -1,19 +1,14 @@
-import java.util.Map;
 
 
 public class MethodInput extends Input {
-	public String className;
-	public Map<String, String> fields;
+	public MJClass currentClass;
 
 	/**
 	 * @param nextVariableIndex
-	 * @param className
-	 * @param fields
+	 * @param currentClass
 	 */
-	public MethodInput(int nextVariableIndex, String className,
-			Map<String, String> fields) {
+	public MethodInput(int nextVariableIndex, MJClass currentClass) {
 		super(nextVariableIndex);
-		this.className = className;
-		this.fields = fields;
+		this.currentClass = currentClass;
 	}
 }

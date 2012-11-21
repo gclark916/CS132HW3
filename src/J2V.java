@@ -10,7 +10,7 @@ public class J2V {
 	public static void main(String [] args) 
 	{
 		try {
-			FileInputStream fileInput = new FileInputStream("test/test5.java");
+			FileInputStream fileInput = new FileInputStream("test/test9.java");
 			System.setIn(fileInput);
 			Node root = new MiniJavaParser(System.in).Goal();
 
@@ -92,9 +92,19 @@ public class J2V {
 		
 		for (MJMethod mjmethod : mjclass.methods.values())
 		{
-			MJMethod newMethod = new MJMethod(mjmethod.name, mjmethod.parameters, mjmethod.returnType, methodIndex);
-			methodIndex++;
-			newClass.methods.put(newMethod.name, newMethod);
+			// If this method is overwriting parent's, then use parent's index
+			if (mjclass.parentClass != null && mjclass.parentClass.methods.containsKey(mjmethod.name))
+			{
+				int parentIndex = newMap.get(mjclass.parentClass.name).methods.get(mjmethod.name).methodTableIndex;
+				MJMethod newMethod = new MJMethod(mjmethod.name, mjmethod.parameters, mjmethod.returnType, parentIndex);
+				newClass.methods.put(newMethod.name, newMethod);
+			}
+			else
+			{
+				MJMethod newMethod = new MJMethod(mjmethod.name, mjmethod.parameters, mjmethod.returnType, methodIndex);
+				methodIndex++;
+				newClass.methods.put(newMethod.name, newMethod);
+			}
 		}
 		
 		int fieldIndex = 1;
@@ -106,9 +116,18 @@ public class J2V {
 		
 		for (MJField mjfield : mjclass.fields.values())
 		{
-			MJField newField = new MJField(mjfield.type, mjfield.name, fieldIndex);
-			fieldIndex++;
-			newClass.fields.put(newField.name, newField);
+			if (mjclass.parentClass != null && mjclass.parentClass.fields.containsKey(mjfield.name))
+			{
+				int parentIndex = newMap.get(mjclass.parentClass.name).fields.get(mjfield.name).index;
+				MJField newField = new MJField(mjfield.type, mjfield.name, parentIndex);
+				newClass.fields.put(newField.name, newField);
+			}
+			else
+			{
+				MJField newField = new MJField(mjfield.type, mjfield.name, fieldIndex);
+				fieldIndex++;
+				newClass.fields.put(newField.name, newField);
+			}
 		}
 		
 		newMap.put(newClass.name, newClass);

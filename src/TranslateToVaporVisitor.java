@@ -1,8 +1,10 @@
 import java.util.ArrayList;
 import java.util.Enumeration;
 import java.util.HashMap;
+import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
+import java.util.Set;
 
 import syntaxtree.AllocationExpression;
 import syntaxtree.AndExpression;
@@ -190,7 +192,7 @@ public class TranslateToVaporVisitor extends GJDepthFirst<Object, Object>
 	   public Object visit(MainClass n, Object argu) {
 		  int nextVariableIndex = 0;
 		  
-		  ExpressionInput input = new ExpressionInput(0, null);
+		  ExpressionInput input = new ExpressionInput(0, null, null, null);
 	      List<VariableDeclarationOutput> variables = (List<VariableDeclarationOutput>) n.f14.accept(this, input);
 	      Map<String, String> variableTypes = new HashMap<String, String>();
 	      for (VariableDeclarationOutput v_i : variables)
@@ -198,7 +200,7 @@ public class TranslateToVaporVisitor extends GJDepthFirst<Object, Object>
 	    	  variableTypes.put(v_i.variableName, v_i.type);
 	      }
 	      
-	      input = new ExpressionInput(0, variableTypes);
+	      input = new ExpressionInput(0, variableTypes, null, variableTypes.keySet());
 	      List<StatementOutput> statements = (List<StatementOutput>) n.f15.accept(this, input);
 	      
 	      StringBuilder mainBuilder = new StringBuilder("func Main()\n");
@@ -278,15 +280,16 @@ public class TranslateToVaporVisitor extends GJDepthFirst<Object, Object>
 			  String methodTable = methodTableBuilder.toString();
 			  
 			  // Construct field map
-			  ExpressionInput exprInput = new ExpressionInput(input.nextVariableIndex, null);
+			  /*ExpressionInput exprInput = new ExpressionInput(input.nextVariableIndex, null, null, null);
 		      List<VariableDeclarationOutput> fields = (List<VariableDeclarationOutput>) fieldsNode.accept(this, exprInput);
 		      Map<String, String> fieldMap = new HashMap<String, String>();
 		      for (VariableDeclarationOutput v_i : fields)
 		      {
 		    	  fieldMap.put(v_i.variableName, v_i.type);
-		      }
+		      }*/
 		      
-		      MethodInput methodInput = new MethodInput(input.nextVariableIndex, className, fieldMap);
+		      // TODO: change methodinput
+		      MethodInput methodInput = new MethodInput(input.nextVariableIndex, classes.get(className));
 		      List<MethodOutput> methods = (List<MethodOutput>) methodsNode.accept(this, methodInput);
 		      StringBuilder methodBuilder = new StringBuilder();
 		      for (MethodOutput m_i : methods)
@@ -334,16 +337,24 @@ public class TranslateToVaporVisitor extends GJDepthFirst<Object, Object>
 		   MethodInput input = (MethodInput) argu;
 	      String methodName = n.f2.f0.tokenImage;
 	      
-	      ExpressionInput tempInput = new ExpressionInput(input.nextVariableIndex, null); 
+	      ExpressionInput tempInput = new ExpressionInput(input.nextVariableIndex, null, null, null); 
 	      List<ParameterOutput> paramList = (List<ParameterOutput>) n.f4.accept(this, tempInput);
 	      List<VariableDeclarationOutput> variableList = (List<VariableDeclarationOutput>) n.f7.accept(this, tempInput);
 	      
 	      // Build map of variable name -> type, starting with class fields
-	      Map<String, String> variableTypes = new HashMap<String, String>(input.fields);
+	      Map<String, String> variableTypes = new HashMap<String, String>();
+	      for (MJField mjfield : input.currentClass.fields.values())
+	      {
+	    	  variableTypes.put(mjfield.name, mjfield.type);
+	      }
 	      // Add the this type to map
-	      variableTypes.put("this", input.className);
+	      variableTypes.put("this", input.currentClass.name);
 	      
-	      // Add method parameters to map
+	      // Keep track of local variables
+	      Set<String> localVariables = new HashSet<String>();
+	      localVariables.add("this");
+	      
+	      // Add method parameters to map and local variables
 	      String parameters = "";
 	      if (paramList != null)
 	      {
@@ -351,19 +362,21 @@ public class TranslateToVaporVisitor extends GJDepthFirst<Object, Object>
 		      for (ParameterOutput p_i : paramList)
 		      {
 		    	  variableTypes.put(p_i.variableName, p_i.type);
+		    	  localVariables.add(p_i.variableName);
 		    	  paramBuilder.append(" ");
 		    	  paramBuilder.append(p_i.variableName);
 		      }
 		      parameters = paramBuilder.toString();
 	      }
 	      
-	      // Add local variables to map
+	      // Add local variables to map and set
 	      for (VariableDeclarationOutput v_i : variableList)
 	      {
 	    	  variableTypes.put(v_i.variableName, v_i.type);
+	    	  localVariables.add(v_i.variableName);
 	      }
 	      
-	      ExpressionInput exprInput = new ExpressionInput(input.nextVariableIndex, variableTypes);
+	      ExpressionInput exprInput = new ExpressionInput(input.nextVariableIndex, variableTypes, input.currentClass, localVariables);
 	      
 	      List<StatementOutput> statementList = (List<StatementOutput>) n.f8.accept(this, exprInput);
 	      StringBuilder statementsBuilder = new StringBuilder();
@@ -376,7 +389,7 @@ public class TranslateToVaporVisitor extends GJDepthFirst<Object, Object>
 	      
 	      ExpressionOutput returnExpr = (ExpressionOutput) n.f10.accept(this, exprInput);
 	      
-	      String funcDeclaration = "func " + input.className + "." + methodName + "(this" + parameters + ")\n";
+	      String funcDeclaration = "func " + input.currentClass.name + "." + methodName + "(this" + parameters + ")\n";
 	      String returnLine = "ret " + returnExpr.expressionVariable + "\n\n";
 	      
 	      String code = funcDeclaration + statements + returnExpr.code + returnLine;
@@ -500,10 +513,15 @@ public class TranslateToVaporVisitor extends GJDepthFirst<Object, Object>
 	    * f2 -> Expression()
 	    * f3 -> ";"
 	    */
-	   //TODO: check if identifier is local var or class field
+	   //TODO: check if identifier is local var or class field - DONE
 	   public Object visit(AssignmentStatement n, Object argu) {
 		   ExpressionInput input = (ExpressionInput) argu;
 		  String variable = n.f0.f0.tokenImage;
+		  if (!input.localVariables.contains(variable))
+		  {
+			  MJField field = input.currentClass.fields.get(variable);
+			  variable = "[this+" + Integer.toString(field.index*4) + "]";
+		  }
 	      ExpressionOutput e = (ExpressionOutput) n.f2.accept(this, input);
 	      
 	      String line1 = variable + " = " + e.expressionVariable + "\n";
@@ -522,10 +540,15 @@ public class TranslateToVaporVisitor extends GJDepthFirst<Object, Object>
 	    * f5 -> Expression()
 	    * f6 -> ";"
 	    */
-	 //TODO: check if identifier is local var or class field
+	 //TODO: check if identifier is local var or class field - DONE
 	   public Object visit(ArrayAssignmentStatement n, Object argu) {
 		   ExpressionInput input = (ExpressionInput) argu;
 		  String arrayAddrVariable = n.f0.f0.tokenImage;
+		  if (!input.localVariables.contains(arrayAddrVariable))
+		  {
+			  MJField field = input.currentClass.fields.get(arrayAddrVariable);
+			  arrayAddrVariable = "[this+" + Integer.toString(field.index*4) + "]";
+		  }
 		  ExpressionOutput e1 = (ExpressionOutput) n.f2.accept(this, input);
 		  
 		  input.nextVariableIndex = e1.nextVariableIndex;
@@ -750,7 +773,6 @@ public class TranslateToVaporVisitor extends GJDepthFirst<Object, Object>
 	    * f3 -> "]"
 	    */
 	   public Object visit(ArrayLookup n, Object argu) {
-		  // TODO: add an if-stmt to check for valid array access?
 		  ExpressionInput input = (ExpressionInput) argu;
 	      ExpressionOutput e1 = (ExpressionOutput) n.f0.accept(this, input);
 	      
@@ -909,9 +931,20 @@ public class TranslateToVaporVisitor extends GJDepthFirst<Object, Object>
 	    *       | NotExpression()
 	    *       | BracketExpression()
 	    */
-	   //TODO: may want a special case on identifier to check if its a local var or a class field
+	   //TODO: may want a special case on identifier to check if its a local var or a class field - DONE
 	   public Object visit(PrimaryExpression n, Object argu) {
 		   ExpressionInput input = (ExpressionInput) argu;
+		   if (Identifier.class.isInstance(n.f0.choice))
+		   {
+			   String variable = ((Identifier) n.f0.choice).f0.tokenImage;
+			   if (!input.localVariables.contains(variable))
+			   {
+				   MJField field = input.currentClass.fields.get(variable);
+				   variable = "[this+" + Integer.toString(field.index*4) + "]";
+			   }
+			   
+			   return new ExpressionOutput(variable, "", input.variableTypes, input.nextVariableIndex);
+		   }
 	      ExpressionOutput _ret = (ExpressionOutput) n.f0.accept(this, input);
 	      return _ret;
 	   }
