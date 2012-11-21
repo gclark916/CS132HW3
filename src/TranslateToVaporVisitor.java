@@ -1012,10 +1012,13 @@ public class TranslateToVaporVisitor extends GJDepthFirst<Object, Object>
 	      String assignAllocSize = allocSizeVariable + " = MulS(" + e.expressionVariable + " 4)\n"; 
 	      String assignFullAllocSize = allocSizeVariable + " = Add(" + allocSizeVariable + " 4)\n"; // add space for length
 	      String assignArrayLengthAddr = arrayLengthAddrVariable + " = HeapAllocZ(" + allocSizeVariable + ")\n";
+	      String nullCheck = "if " + arrayLengthAddrVariable + " goto :null" + input.nextVariableIndex + "\n";
+	      String error = "Error(\"null pointer\")\n";
+	      String endCheck = "null" + input.nextVariableIndex + ":\n";
 	      String storeLength = "[" + arrayLengthAddrVariable + "] = " + e.expressionVariable + "\n"; 
 	      String assignArrayAddr = arrayAddrVariable + " = Add(" + arrayLengthAddrVariable + " 4)\n";
 	      
-	      String code = e.code + assignAllocSize + assignFullAllocSize + assignArrayLengthAddr + storeLength + assignArrayAddr;
+	      String code = e.code + assignAllocSize + assignFullAllocSize + assignArrayLengthAddr + nullCheck + error + endCheck + storeLength + assignArrayAddr;
 	      ExpressionOutput _ret = new ExpressionOutput(arrayAddrVariable, code, e.variableTypes, e.nextVariableIndex+3);
 	      return _ret;
 	   }
@@ -1032,9 +1035,12 @@ public class TranslateToVaporVisitor extends GJDepthFirst<Object, Object>
 	      String className = n.f1.f0.tokenImage;
 	      MJClass mjclass = classes.get(className);
 	      int size = 4 * mjclass.getFields().size() + 4;
-	      String line1 = objectAddrVariable + " = HeapAllocZ(" + size + ")\n";
-	      String line2 = "[" + objectAddrVariable + "] = :vmt_" + className + "\n";
-	      String code = line1 + line2;
+	      String assignAllocation = objectAddrVariable + " = HeapAllocZ(" + size + ")\n";
+	      String nullCheck = "if " + objectAddrVariable + " goto :null" + input.nextVariableIndex + "\n";
+	      String error = "Error(\"null pointer\")\n";
+	      String endCheck = "null" + input.nextVariableIndex + ":\n";
+	      String storeMethodTable = "[" + objectAddrVariable + "] = :vmt_" + className + "\n";
+	      String code = assignAllocation + nullCheck + error + endCheck + storeMethodTable;
 	      
 	      Map<String, String> outputVariableTypes = input.variableTypes;
 	      outputVariableTypes.put(objectAddrVariable, className);
