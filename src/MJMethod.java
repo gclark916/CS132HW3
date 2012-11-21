@@ -9,19 +9,21 @@ public class MJMethod
 	public String returnType;
 	public String name;
 	public int methodTableIndex;
+	public String parentClass; 
 	
 	/**
 	 * @param parameterTypes
 	 * @param returnType
 	 * @param name
 	 */
-	public MJMethod(String name, List<Map<String, String>> parameters, String returnType, int methodTableIndex)
+	public MJMethod(String name, List<Map<String, String>> parameters, String returnType, int methodTableIndex, String parentClass)
 	{
 		super();
 		this.parameters = parameters;
 		this.returnType = returnType;
 		this.name = name;
 		this.methodTableIndex = methodTableIndex;
+		this.parentClass = parentClass;
 	}
 
 	/* (non-Javadoc)

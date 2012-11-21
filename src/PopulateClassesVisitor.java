@@ -179,7 +179,7 @@ public class PopulateClassesVisitor extends GJDepthFirst<Object, Object> {
 	      String returnType = (String) n.f1.accept(this, argu);
 	      String name = n.f2.f0.tokenImage;
 	      
-	      MJMethod _ret = new MJMethod(name, null, returnType, -1);
+	      MJMethod _ret = new MJMethod(name, null, returnType, -1, null);
 	      return _ret;
 	   }	
 	

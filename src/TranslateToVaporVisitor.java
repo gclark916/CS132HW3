@@ -60,6 +60,7 @@ import visitor.GJDepthFirst;
 public class TranslateToVaporVisitor extends GJDepthFirst<Object, Object> 
 {
 	Map<String, MJClass> classes;
+	boolean allocArray;
 	
 	/**
 	 * @param classes
@@ -67,6 +68,7 @@ public class TranslateToVaporVisitor extends GJDepthFirst<Object, Object>
 	public TranslateToVaporVisitor(Map<String, MJClass> classes) {
 		super();
 		this.classes = classes;
+		this.allocArray = false;
 	}
 
 	//
@@ -162,6 +164,11 @@ public class TranslateToVaporVisitor extends GJDepthFirst<Object, Object>
 	      for (ClassOutput c_i : classOutputs)
 	      {
 	    	  codeBuilder.append(c_i.code);
+	      }
+	      
+	      if (allocArray)
+	      {
+	    	  codeBuilder.append("func AllocArray(size)\nbytes = MulS(size 4)\nbytes = Add(bytes 4)\nv = HeapAllocZ(bytes)\n[v] = size\nret v\n");
 	      }
 	      
 	      String code = codeBuilder.toString();
@@ -266,7 +273,7 @@ public class TranslateToVaporVisitor extends GJDepthFirst<Object, Object>
 			  
 			  // Build method table with correct order
 			  MJMethod[] methodArray = new MJMethod[mjclass.methods.size()]; 
-			  for (MJMethod method : mjclass.methods.values())
+			  for (MJMethod method : mjclass.getMethods().values())
 			  {
 				  methodArray[method.methodTableIndex] = method;
 			  }
@@ -274,19 +281,10 @@ public class TranslateToVaporVisitor extends GJDepthFirst<Object, Object>
 			  StringBuilder methodTableBuilder = new StringBuilder(methodTableLabel);
 			  for (MJMethod method : methodArray)
 			  {
-				  String funcLabel = ":" + className + "." + method.name + "\n";
+				  String funcLabel = ":" + method.parentClass + "." + method.name + "\n";
 				  methodTableBuilder.append(funcLabel);
 			  }
 			  String methodTable = methodTableBuilder.toString();
-			  
-			  // Construct field map
-			  /*ExpressionInput exprInput = new ExpressionInput(input.nextVariableIndex, null, null, null);
-		      List<VariableDeclarationOutput> fields = (List<VariableDeclarationOutput>) fieldsNode.accept(this, exprInput);
-		      Map<String, String> fieldMap = new HashMap<String, String>();
-		      for (VariableDeclarationOutput v_i : fields)
-		      {
-		    	  fieldMap.put(v_i.variableName, v_i.type);
-		      }*/
 		      
 		      // TODO: change methodinput
 		      MethodInput methodInput = new MethodInput(input.nextVariableIndex, classes.get(className));
@@ -543,11 +541,10 @@ public class TranslateToVaporVisitor extends GJDepthFirst<Object, Object>
 	 //TODO: check if identifier is local var or class field - DONE
 	   public Object visit(ArrayAssignmentStatement n, Object argu) {
 		   ExpressionInput input = (ExpressionInput) argu;
-		  String arrayAddrVariable = n.f0.f0.tokenImage;
-		  if (!input.localVariables.contains(arrayAddrVariable))
+		  if (!input.localVariables.contains(n.f0.f0.tokenImage))
 		  {
-			  MJField field = input.currentClass.getFields().get(arrayAddrVariable);
-			  arrayAddrVariable = "[this+" + Integer.toString(field.index*4) + "]";
+			  MJField field = input.currentClass.getFields().get(n.f0.f0.tokenImage);
+			  n.f0.f0.tokenImage = "[this+" + Integer.toString(field.index*4) + "]";
 		  }
 		  ExpressionOutput e1 = (ExpressionOutput) n.f2.accept(this, input);
 		  
@@ -556,19 +553,20 @@ public class TranslateToVaporVisitor extends GJDepthFirst<Object, Object>
 	      ExpressionOutput e2 = (ExpressionOutput) n.f5.accept(this, input);
 	      
 	      String indexVariable = e1.expressionVariable;
-	      String offsetVariable = "t." + Integer.toString(e2.nextVariableIndex);
-	      String actualAddrVariable = "t." + Integer.toString(e2.nextVariableIndex+1);
+	      String arrayAddrVariable = "t." + Integer.toString(e2.nextVariableIndex);
+	      String offsetVariable = "t." + Integer.toString(e2.nextVariableIndex+1);
+	      String actualAddrVariable = "t." + Integer.toString(e2.nextVariableIndex+2);
 	      
 	      // calculate the address
-	      String line1 = offsetVariable + " = MulS(" + indexVariable + " 4)\n"; 
-	      String line2 = actualAddrVariable + " = Add(" + arrayAddrVariable + " " + offsetVariable + ")\n";
-	      String expressionVariable = "[" + actualAddrVariable + "]";
-	      
+	      String assignOffset = offsetVariable + " = MulS(" + indexVariable + " 4)\n"; 
+	      String assignArrayAddr = arrayAddrVariable + " = " + n.f0.f0.tokenImage + "\n";
+	      String addOffsetToArrayAddr = actualAddrVariable + " = Add(" + arrayAddrVariable + " " + offsetVariable + ")\n";
+	      String expressionVariable = "[" + actualAddrVariable + "+4]";
 	      String assignmentLine = expressionVariable + " = " + e2.expressionVariable + "\n";
 	      
-	      String code = e1.code + e2.code + line1 + line2 + assignmentLine;
+	      String code = e1.code + e2.code + assignOffset + assignArrayAddr + addOffsetToArrayAddr + assignmentLine;
 	      
-	      StatementOutput _ret = new StatementOutput(code, e2.nextVariableIndex+2);
+	      StatementOutput _ret = new StatementOutput(code, e2.nextVariableIndex+3);
 	      return _ret;
 	   }
 
@@ -779,29 +777,27 @@ public class TranslateToVaporVisitor extends GJDepthFirst<Object, Object>
 	      input.nextVariableIndex = e1.nextVariableIndex;
 	      input.variableTypes = e1.variableTypes;
 	      ExpressionOutput e2 = (ExpressionOutput) n.f2.accept(this, input);
-	      
-	      String arrayAddrVariable = e1.expressionVariable;
-	      String indexVariable = e2.expressionVariable;
-	      String boundsVar = "t." + Integer.toString(e2.nextVariableIndex);
-	      String offsetVariable = "t." + Integer.toString(e2.nextVariableIndex+1);
-	      String actualAddrVariable = "t." + Integer.toString(e2.nextVariableIndex+2);
-	      
-	      // Check bounds
-	      String assignArrayLength = boundsVar + " = [" + arrayAddrVariable + "-4]\n";
-	      String assignCheckValue = boundsVar + " = Sub(" + boundsVar + " 1)\n";
-	      String assignCheckBool = boundsVar + " = LtS(" + boundsVar + " " + indexVariable + ")\n";
-	      String ifStmt = "if0 " + boundsVar + " goto :bounds" + Integer.toString(e2.nextVariableIndex) + "\n";
-	      String error = "Error(\"array index out of bounds\")\n";
+
+	      String arrayVariable = "t." + Integer.toString(e2.nextVariableIndex);
+	      String assignArray = arrayVariable + " = " + e1.expressionVariable + "\n";
+	      String nullCheck = "if " + arrayVariable + " goto :null" + Integer.toString(e2.nextVariableIndex) + "\n";
+	      String nullError = "Error(\"null pointer\")\n";
+	      String nullLabel = "null" + Integer.toString(e2.nextVariableIndex) + ":\n";
+	      String arrayLengthVariable = "t." + Integer.toString(e2.nextVariableIndex+1);
+	      String assignArrayLength = arrayLengthVariable + " = [" + arrayVariable + "]\n";
+	      String assignBoundsCheck = arrayLengthVariable + " = Lt(" + e2.expressionVariable + " " +arrayLengthVariable + ")\n";
+	      String boundsCheck = "if " + arrayLengthVariable + " goto :bounds" + Integer.toString(e2.nextVariableIndex) + "\n";
+	      String boundsError = "Error(\"array index out of bounds\")\n";
 	      String boundsLabel = "bounds" + Integer.toString(e2.nextVariableIndex) + ":\n";
+	      String mulIndex = arrayLengthVariable + " = MulS(" + e2.expressionVariable + " 4)\n";
+	      String calculateAddr = arrayLengthVariable + " = Add(" + arrayLengthVariable + " " + arrayVariable + ")\n";
+	      String finalVariable = "t." + Integer.toString(e2.nextVariableIndex+2);
+	      String finalAssign = finalVariable + " = [" + arrayLengthVariable + "+4]\n";
 	      
-	      // calculate the address
-	      String assignOffset = offsetVariable + " = MulS(" + indexVariable + " 4)\n"; 
-	      String assignAddr = actualAddrVariable + " = Add(" + arrayAddrVariable + " " + offsetVariable + ")\n";
-	      String expressionVariable = "[" + actualAddrVariable + "]";
+	      String code = e1.code + e2.code + assignArray + nullCheck + nullError + nullLabel + assignArrayLength + assignBoundsCheck + boundsCheck + boundsError + boundsLabel + mulIndex
+	    		  + calculateAddr + finalAssign;
 	      
-	      String code = e1.code + e2.code + assignArrayLength + assignCheckValue + assignCheckBool + ifStmt + error + boundsLabel + assignOffset + assignAddr;
-	      
-	      ExpressionOutput _ret = new ExpressionOutput(expressionVariable, code, e2.variableTypes, e2.nextVariableIndex+3);
+	      ExpressionOutput _ret = new ExpressionOutput(finalVariable, code, e2.variableTypes, e2.nextVariableIndex+3);
 	      return _ret;
 	   }
 
@@ -815,7 +811,7 @@ public class TranslateToVaporVisitor extends GJDepthFirst<Object, Object>
 	      String arrayAddrVariable = e.expressionVariable;
 	      String arrayLengthVariable = "t." + Integer.toString(e.nextVariableIndex);
 	      
-	      String code = arrayLengthVariable + " = [" + arrayAddrVariable + "-4]\n";
+	      String code = arrayLengthVariable + " = [" + arrayAddrVariable + "]\n";
 	      
 	      ExpressionOutput _ret = new ExpressionOutput(arrayLengthVariable, code, e.variableTypes, e.nextVariableIndex+1);
 	      return _ret;
@@ -1005,11 +1001,13 @@ public class TranslateToVaporVisitor extends GJDepthFirst<Object, Object>
 	    * f3 -> Expression()
 	    * f4 -> "]"
 	    */
+	   //TODO: changing allocation scheme
 	   public Object visit(ArrayAllocationExpression n, Object argu) {
+		   this.allocArray = true;
 		   ExpressionInput input = (ExpressionInput) argu;
 	      ExpressionOutput e = (ExpressionOutput) n.f3.accept(this, input);
 	      
-	      String allocSizeVariable = "t." + Integer.toString(e.nextVariableIndex);
+	      /*String allocSizeVariable = "t." + Integer.toString(e.nextVariableIndex);
 	      String arrayLengthAddrVariable = "t." + Integer.toString(e.nextVariableIndex+1);
 	      String arrayAddrVariable = "t." + Integer.toString(e.nextVariableIndex+2);
 	      
@@ -1022,8 +1020,10 @@ public class TranslateToVaporVisitor extends GJDepthFirst<Object, Object>
 	      String storeLength = "[" + arrayLengthAddrVariable + "] = " + e.expressionVariable + "\n"; 
 	      String assignArrayAddr = arrayAddrVariable + " = Add(" + arrayLengthAddrVariable + " 4)\n";
 	      
-	      String code = e.code + assignAllocSize + assignFullAllocSize + assignArrayLengthAddr + nullCheck + error + endCheck + storeLength + assignArrayAddr;
-	      ExpressionOutput _ret = new ExpressionOutput(arrayAddrVariable, code, e.variableTypes, e.nextVariableIndex+3);
+	      String code = e.code + assignAllocSize + assignFullAllocSize + assignArrayLengthAddr + nullCheck + error + endCheck + storeLength + assignArrayAddr;*/
+	      String arrayVariable = "t." + Integer.toString(e.nextVariableIndex);
+	      String code = arrayVariable + " = call :AllocArray(" + e.expressionVariable + ")\n"; 
+	      ExpressionOutput _ret = new ExpressionOutput(arrayVariable, code, e.variableTypes, e.nextVariableIndex+1);
 	      return _ret;
 	   }
 

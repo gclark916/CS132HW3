@@ -10,7 +10,7 @@ public class J2V {
 	public static void main(String [] args) 
 	{
 		try {
-			FileInputStream fileInput = new FileInputStream("test/TreeVisitor.java");
+			FileInputStream fileInput = new FileInputStream("test/test10.java");
 			System.setIn(fileInput);
 			Node root = new MiniJavaParser(System.in).Goal();
 
@@ -75,13 +75,16 @@ public class J2V {
 			return;
 		
 		// If the parent's class does not have generated indices yet, do the parent first
-		if (mjclass.parentClass != null && !newMap.containsKey(mjclass.parentClass))
+		if (mjclass.parentClass != null && !newMap.containsKey(mjclass.parentClass.name))
 			generateIndices(oldMap.get(mjclass.parentClass.name), oldMap, newMap);
 		
 		// Everything is set, generate indices for this MJClass
 		Map<String, MJMethod> newMethodMap = new HashMap<String, MJMethod>();
 		Map<String, MJField> newFieldMap = new HashMap<String, MJField>();
-		MJClass newClass = new MJClass(newMethodMap, newFieldMap, mjclass.name, mjclass.parentClass);
+		MJClass newParentClass = null;
+		if (mjclass.parentClass != null)
+			newParentClass = newMap.get(mjclass.parentClass.name);
+		MJClass newClass = new MJClass(newMethodMap, newFieldMap, mjclass.name, newParentClass);
 		
 		int methodIndex = 0;
 		if (mjclass.parentClass != null)
@@ -95,13 +98,14 @@ public class J2V {
 			// If this method is overwriting parent's, then use parent's index
 			if (mjclass.parentClass != null && mjclass.parentClass.methods.containsKey(mjmethod.name))
 			{
-				int parentIndex = newMap.get(mjclass.parentClass.name).methods.get(mjmethod.name).methodTableIndex;
-				MJMethod newMethod = new MJMethod(mjmethod.name, mjmethod.parameters, mjmethod.returnType, parentIndex);
+				MJMethod parentMethod = newMap.get(mjclass.parentClass.name).getMethods().get(mjmethod.name);
+				int parentIndex = parentMethod.methodTableIndex;
+				MJMethod newMethod = new MJMethod(mjmethod.name, mjmethod.parameters, mjmethod.returnType, parentIndex, mjclass.name);
 				newClass.methods.put(newMethod.name, newMethod);
 			}
 			else
 			{
-				MJMethod newMethod = new MJMethod(mjmethod.name, mjmethod.parameters, mjmethod.returnType, methodIndex);
+				MJMethod newMethod = new MJMethod(mjmethod.name, mjmethod.parameters, mjmethod.returnType, methodIndex, mjclass.name);
 				methodIndex++;
 				newClass.methods.put(newMethod.name, newMethod);
 			}

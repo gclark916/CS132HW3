@@ -1,13 +1,10 @@
 
-public class ClassInput {
-	public int nextVariableIndex;
-
+public class ClassInput extends Input {
 	/**
 	 * @param nextVariableIndex
 	 */
 	public ClassInput(int nextVariableIndex) {
-		super();
-		this.nextVariableIndex = nextVariableIndex;
+		super(nextVariableIndex);
 	}
 
 }
