@@ -270,7 +270,7 @@ public class TranslateToVaporVisitor extends GJDepthFirst<Object, Object>
 			  {
 				  methodArray[method.methodTableIndex] = method;
 			  }
-			  String methodTableLabel = "const vmt_" + className + ":\n";
+			  String methodTableLabel = "const vmt_" + className + "\n";
 			  StringBuilder methodTableBuilder = new StringBuilder(methodTableLabel);
 			  for (MJMethod method : methodArray)
 			  {
@@ -941,6 +941,9 @@ public class TranslateToVaporVisitor extends GJDepthFirst<Object, Object>
 			   {
 				   MJField field = input.currentClass.fields.get(variable);
 				   variable = "[this+" + Integer.toString(field.index*4) + "]";
+				   String expressionVariable = "t." + Integer.toString(input.nextVariableIndex);
+				   String code = expressionVariable + " = " + variable + "\n";
+				   return new ExpressionOutput(expressionVariable, code, input.variableTypes, input.nextVariableIndex+1);
 			   }
 			   
 			   return new ExpressionOutput(variable, "", input.variableTypes, input.nextVariableIndex);

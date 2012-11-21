@@ -10,8 +10,8 @@ public class J2V {
 	public static void main(String [] args) 
 	{
 		try {
-			//FileInputStream fileInput = new FileInputStream("test/QuickSort.java");
-			//System.setIn(fileInput);
+			FileInputStream fileInput = new FileInputStream("test/QuickSort.java");
+			System.setIn(fileInput);
 			Node root = new MiniJavaParser(System.in).Goal();
 
 			PopulateClassesVisitor firstPass = new PopulateClassesVisitor();
@@ -27,10 +27,10 @@ public class J2V {
 		catch (ParseException e) 
 		{
 			System.out.println(e.toString());
-		} /*catch (FileNotFoundException e) {
+		} catch (FileNotFoundException e) {
 			// TODO Auto-generated catch block
 			e.printStackTrace();
-		}*/
+		}
 	}
 
 	private static Map<String, MJClass> linkParentClasses(Map<String, MJClass> oldMap) 
