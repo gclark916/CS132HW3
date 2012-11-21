@@ -10,7 +10,7 @@ public class J2V {
 	public static void main(String [] args) 
 	{
 		try {
-			FileInputStream fileInput = new FileInputStream("test/test3.java");
+			FileInputStream fileInput = new FileInputStream("test/test5.java");
 			System.setIn(fileInput);
 			Node root = new MiniJavaParser(System.in).Goal();
 			//System.out.println("Program parsed successfully");
@@ -47,7 +47,10 @@ public class J2V {
 	private static void linkParentClass(MJClass mjclass, Map<String, MJClass> oldMap, Map<String, MJClass> newMap) 
 	{
 		if (mjclass.parentClass == null)
+		{
+			newMap.put(mjclass.name, mjclass);
 			return;
+		}
 		
 		if (newMap.containsKey(mjclass.parentClass.name))
 			linkParentClass(oldMap.get(mjclass.parentClass.name), oldMap, newMap);
@@ -108,5 +111,7 @@ public class J2V {
 			fieldIndex++;
 			newClass.fields.put(newField.name, newField);
 		}
+		
+		newMap.put(newClass.name, newClass);
 	}
 }

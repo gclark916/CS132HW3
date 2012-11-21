@@ -18,6 +18,7 @@ import syntaxtree.NodeListOptional;
 import syntaxtree.NodeOptional;
 import syntaxtree.NodeSequence;
 import syntaxtree.Type;
+import syntaxtree.TypeDeclaration;
 import syntaxtree.VarDeclaration;
 import visitor.GJDepthFirst;
 
@@ -91,6 +92,15 @@ public class PopulateClassesVisitor extends GJDepthFirst<Object, Object> {
 	    
 	    return classes;
 	}
+	
+	   /**
+	    * f0 -> ClassDeclaration()
+	    *       | ClassExtendsDeclaration()
+	    */
+	   public Object visit(TypeDeclaration n, Object argu) {
+	      MJClass _ret = (MJClass) n.f0.accept(this, argu);
+	      return _ret;
+	   }
 
 	/**
 	* f0 -> "class"
@@ -167,7 +177,7 @@ public class PopulateClassesVisitor extends GJDepthFirst<Object, Object> {
 	    */
 	   public Object visit(MethodDeclaration n, Object argu) {
 	      String returnType = (String) n.f1.accept(this, argu);
-	      String name = n.f12.tokenImage;
+	      String name = n.f2.f0.tokenImage;
 	      
 	      MJMethod _ret = new MJMethod(name, null, returnType, -1);
 	      return _ret;

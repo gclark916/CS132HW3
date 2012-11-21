@@ -77,6 +77,14 @@ public class TranslateToVaporVisitor extends GJDepthFirst<Object, Object>
 		for ( Enumeration<Node> e = n.elements(); e.hasMoreElements(); ) 
 		{
 			Object o = e.nextElement().accept(this,argu);
+			if (Input.class.isInstance(argu) && Output.class.isInstance(o))
+            {
+            	((Input) argu).nextVariableIndex = ((Output) o).nextVariableIndex;
+            	if (ExpressionInput.class.isInstance(argu) && ExpressionOutput.class.isInstance(o))
+            	{
+            		((ExpressionInput) argu).variableTypes = ((ExpressionOutput) o).variableTypes;
+            	}
+            }
 			_ret.add(o);
 			_count++;
 		}
@@ -89,6 +97,14 @@ public class TranslateToVaporVisitor extends GJDepthFirst<Object, Object>
 	         int _count=0;
 	         for ( Enumeration<Node> e = n.elements(); e.hasMoreElements(); ) {
 	            Object o = e.nextElement().accept(this,argu);
+	            if (Input.class.isInstance(argu) && Output.class.isInstance(o))
+	            {
+	            	((Input) argu).nextVariableIndex = ((Output) o).nextVariableIndex;
+	            	if (ExpressionInput.class.isInstance(argu) && ExpressionOutput.class.isInstance(o))
+	            	{
+	            		((ExpressionInput) argu).variableTypes = ((ExpressionOutput) o).variableTypes;
+	            	}
+	            }
 	            _ret.add(o);
 	            _count++;
 	         }
@@ -105,10 +121,18 @@ public class TranslateToVaporVisitor extends GJDepthFirst<Object, Object>
 	   }
 
 	   public Object visit(NodeSequence n, Object argu) {
-	      Object _ret=null;
+		   List<Object> _ret = new ArrayList<Object>();
 	      int _count=0;
 	      for ( Enumeration<Node> e = n.elements(); e.hasMoreElements(); ) {
-	         e.nextElement().accept(this,argu);
+	         Object o = e.nextElement().accept(this,argu);
+	         if (Input.class.isInstance(argu) && Output.class.isInstance(o))
+	            {
+	            	((Input) argu).nextVariableIndex = ((Output) o).nextVariableIndex;
+	            	if (ExpressionInput.class.isInstance(argu) && ExpressionOutput.class.isInstance(o))
+	            	{
+	            		((ExpressionInput) argu).variableTypes = ((ExpressionOutput) o).variableTypes;
+	            	}
+	            }
 	         _count++;
 	      }
 	      return _ret;
@@ -184,7 +208,7 @@ public class TranslateToVaporVisitor extends GJDepthFirst<Object, Object>
 	    	  nextVariableIndex = s_i.nextVariableIndex;
 	      }
 	      
-	      mainBuilder.append("ret\n");
+	      mainBuilder.append("ret\n\n");
 	      
 	      String code = mainBuilder.toString();
 	      
@@ -316,10 +340,10 @@ public class TranslateToVaporVisitor extends GJDepthFirst<Object, Object>
 	      Map<String, String> variableTypes = new HashMap<String, String>(input.fields);
 	      
 	      // Add method parameters to map
-	      String parameters = "this";
+	      String parameters = "";
 	      if (paramList != null)
 	      {
-		      StringBuilder paramBuilder = new StringBuilder("this");
+		      StringBuilder paramBuilder = new StringBuilder();
 		      for (ParameterOutput p_i : paramList)
 		      {
 		    	  variableTypes.put(p_i.variableName, p_i.type);
@@ -348,8 +372,8 @@ public class TranslateToVaporVisitor extends GJDepthFirst<Object, Object>
 	      
 	      ExpressionOutput returnExpr = (ExpressionOutput) n.f10.accept(this, exprInput);
 	      
-	      String funcDeclaration = "func " + input.className + "." + methodName + "(this " + parameters + ")\n";
-	      String returnLine = "ret " + returnExpr.expressionVariable;
+	      String funcDeclaration = "func " + input.className + "." + methodName + "(this" + parameters + ")\n";
+	      String returnLine = "ret " + returnExpr.expressionVariable + "\n\n";
 	      
 	      String code = funcDeclaration + statements + returnExpr.code + returnLine;
 	      
@@ -397,8 +421,11 @@ public class TranslateToVaporVisitor extends GJDepthFirst<Object, Object>
 	    *       | Identifier()
 	    */
 	   public Object visit(Type n, Object argu) {
-	      String _ret = (String) n.f0.accept(this, argu);
-	      return _ret;
+	      Object o = n.f0.accept(this, argu);
+	      if (o.getClass() == String.class)
+	    	  return o;
+	      ExpressionOutput e = (ExpressionOutput) o;	    
+	      return e.expressionVariable;
 	   }
 
 	   /**
@@ -448,7 +475,18 @@ public class TranslateToVaporVisitor extends GJDepthFirst<Object, Object>
 	    */
 	   public Object visit(Block n, Object argu) {
 		   ExpressionInput input = (ExpressionInput) argu;
-	      StatementOutput _ret = (StatementOutput) n.f1.accept(this, input);
+	      List<StatementOutput> statementList = (List<StatementOutput>) n.f1.accept(this, input);
+	      
+	      StringBuilder codeBuilder = new StringBuilder();
+	      int nextVariableIndex = input.nextVariableIndex;
+	      for (StatementOutput s_i : statementList)
+	      {
+	    	  codeBuilder.append(s_i.code);
+	    	  nextVariableIndex = s_i.nextVariableIndex;
+	      }
+	      String code = codeBuilder.toString();
+	      
+	      StatementOutput _ret = new StatementOutput(code, nextVariableIndex);
 	      return _ret;
 	   }
 
@@ -766,7 +804,7 @@ public class TranslateToVaporVisitor extends GJDepthFirst<Object, Object>
 	      
 	      input.nextVariableIndex = e1.nextVariableIndex;
 	      input.variableTypes = e1.variableTypes;
-	      List<ExpressionOutput> el = (List<ExpressionOutput>) n.f4.accept(this, input);
+	      List<ExpressionOutput> expressionList = (List<ExpressionOutput>) n.f4.accept(this, input);
 	      
 	      int nextVarIndex = e1.nextVariableIndex;
 	      Map<String, String> outputVariableTypes = e1.variableTypes;
@@ -774,11 +812,14 @@ public class TranslateToVaporVisitor extends GJDepthFirst<Object, Object>
 	      
 	      // Add code for parameters
 	      
-	      for (ExpressionOutput e_i : el)
+	      if (expressionList != null)
 	      {
-	    	  codeBuilder.append(e_i.code);
-	    	  nextVarIndex = e_i.nextVariableIndex;
-	    	  outputVariableTypes = e_i.variableTypes;
+	    	  for (ExpressionOutput e_i : expressionList)
+		      {
+		    	  codeBuilder.append(e_i.code);
+		    	  nextVarIndex = e_i.nextVariableIndex;
+		    	  outputVariableTypes = e_i.variableTypes;
+		      }
 	      }
 	      
 	      // Assign method table addr to a variable
@@ -787,17 +828,20 @@ public class TranslateToVaporVisitor extends GJDepthFirst<Object, Object>
 	      
 	      // Assign method addr to a variable
 	      String methodAddr = methodTableAddr;
-	      String assignMethodAddr = methodAddr + " = [" + methodTableAddr + "+" + Integer.toString(methodIndex * 4) + "\n";
+	      String assignMethodAddr = methodAddr + " = [" + methodTableAddr + "+" + Integer.toString(methodIndex * 4) + "]\n";
 	      
 	      // Add call line
 	      String returnVar = "t." + Integer.toString(nextVarIndex+1);
 	      
 	      // Build parameter list for call
 	      StringBuilder paramBuilder = new StringBuilder(objectVariable);
-	      for (ExpressionOutput paramExpr : el)
+	      if (expressionList != null)
 	      {
-	    	  paramBuilder.append(" ");
-	    	  paramBuilder.append(paramExpr.expressionVariable);
+		      for (ExpressionOutput paramExpr : expressionList)
+		      {
+		    	  paramBuilder.append(" ");
+		    	  paramBuilder.append(paramExpr.expressionVariable);
+		      }
 	      }
 	      String parameters = paramBuilder.toString();
 	      

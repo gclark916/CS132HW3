@@ -1,15 +1,10 @@
 
-public class MethodOutput {
-	public String code;
-	public int nextVariableIndex;
-	
+public class MethodOutput extends Output {	
 	/**
 	 * @param code
 	 * @param nextVariableIndex
 	 */
 	public MethodOutput(String code, int nextVariableIndex) {
-		super();
-		this.code = code;
-		this.nextVariableIndex = nextVariableIndex;
+		super(code, nextVariableIndex);
 	}
 }

@@ -1,8 +1,7 @@
 import java.util.Map;
 
 
-public class MethodInput {
-	public int nextVariableIndex;
+public class MethodInput extends Input {
 	public String className;
 	public Map<String, String> fields;
 
@@ -13,8 +12,7 @@ public class MethodInput {
 	 */
 	public MethodInput(int nextVariableIndex, String className,
 			Map<String, String> fields) {
-		super();
-		this.nextVariableIndex = nextVariableIndex;
+		super(nextVariableIndex);
 		this.className = className;
 		this.fields = fields;
 	}
