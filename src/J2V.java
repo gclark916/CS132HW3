@@ -10,7 +10,7 @@ public class J2V {
 	public static void main(String [] args) 
 	{
 		try {
-			FileInputStream fileInput = new FileInputStream("test/QuickSort.java");
+			FileInputStream fileInput = new FileInputStream("test/BinaryTree.java");
 			System.setIn(fileInput);
 			Node root = new MiniJavaParser(System.in).Goal();
 

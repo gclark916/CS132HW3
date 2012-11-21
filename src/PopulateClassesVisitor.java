@@ -232,4 +232,12 @@ public class PopulateClassesVisitor extends GJDepthFirst<Object, Object> {
 		   String _ret = "int";
 	      return _ret;
 	   }
+	   
+	   /**
+	    * f0 -> <IDENTIFIER>
+	    */
+	   public Object visit(Identifier n, Object argu) {
+	      String _ret = n.f0.tokenImage;
+	      return _ret;
+	   }
 }
