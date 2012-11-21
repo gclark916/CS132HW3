@@ -51,9 +51,9 @@ public class MJClass {
 		return completeMethods;
 	}
 	
-	public Map<String, String> getFields() 
+	public Map<String, MJField> getFields() 
 	{
-		Map<String, String> completeFields = new HashMap<String, String>();
+		Map<String, MJField> completeFields = new HashMap<String, MJField>();
 		
 		if (parentClass != null)
 		{

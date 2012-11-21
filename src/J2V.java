@@ -10,7 +10,7 @@ public class J2V {
 	public static void main(String [] args) 
 	{
 		try {
-			FileInputStream fileInput = new FileInputStream("test/Factorial.java");
+			FileInputStream fileInput = new FileInputStream("test/test3.java");
 			System.setIn(fileInput);
 			Node root = new MiniJavaParser(System.in).Goal();
 			//System.out.println("Program parsed successfully");
@@ -36,7 +36,7 @@ public class J2V {
 
 	private static Map<String, MJClass> linkParentClasses(Map<String, MJClass> oldMap) 
 	{
-		Map<String, MJClass> newMap = new Map<String, MJClass>();
+		Map<String, MJClass> newMap = new HashMap<String, MJClass>();
 		for (MJClass mjclass : oldMap.values())
 		{
 			linkParentClass(mjclass, oldMap, newMap);

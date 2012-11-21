@@ -166,14 +166,15 @@ public class TranslateToVaporVisitor extends GJDepthFirst<Object, Object>
 	   public Object visit(MainClass n, Object argu) {
 		  int nextVariableIndex = 0;
 		  
-	      List<VariableDeclarationOutput> variables = (List<VariableDeclarationOutput>) n.f14.accept(this, argu);
+		  ExpressionInput input = new ExpressionInput(0, null);
+	      List<VariableDeclarationOutput> variables = (List<VariableDeclarationOutput>) n.f14.accept(this, input);
 	      Map<String, String> variableTypes = new HashMap<String, String>();
 	      for (VariableDeclarationOutput v_i : variables)
 	      {
 	    	  variableTypes.put(v_i.variableName, v_i.type);
 	      }
 	      
-	      ExpressionInput input = new ExpressionInput(0, variableTypes);
+	      input = new ExpressionInput(0, variableTypes);
 	      List<StatementOutput> statements = (List<StatementOutput>) n.f15.accept(this, input);
 	      
 	      StringBuilder mainBuilder = new StringBuilder("func Main()\n");
@@ -252,7 +253,9 @@ public class TranslateToVaporVisitor extends GJDepthFirst<Object, Object>
 			  }
 			  String methodTable = methodTableBuilder.toString();
 			  
-		      List<VariableDeclarationOutput> fields = (List<VariableDeclarationOutput>) fieldsNode.accept(this, input);
+			  // Construct field map
+			  ExpressionInput exprInput = new ExpressionInput(input.nextVariableIndex, null);
+		      List<VariableDeclarationOutput> fields = (List<VariableDeclarationOutput>) fieldsNode.accept(this, exprInput);
 		      Map<String, String> fieldMap = new HashMap<String, String>();
 		      for (VariableDeclarationOutput v_i : fields)
 		      {
@@ -282,7 +285,7 @@ public class TranslateToVaporVisitor extends GJDepthFirst<Object, Object>
 	    */
 	   public Object visit(VarDeclaration n, Object argu) {
 	      String type = (String) n.f0.accept(this, argu);
-	      String variableName = (String) n.f1.accept(this, argu);
+	      String variableName = n.f1.f0.tokenImage;
 	      
 	      VariableDeclarationOutput _ret = new VariableDeclarationOutput(type, variableName);
 	      return _ret;
@@ -525,7 +528,7 @@ public class TranslateToVaporVisitor extends GJDepthFirst<Object, Object>
 	      String condCheck = "if0 " + e1.expressionVariable +" goto :if" + ifNum + "_else\n";
 	      String gotoEnd = "goto :if" + ifNum + "_end\n";
 	      String elseLabel = "if" + ifNum + "_else:\n";
-	      String endLabel = "if" + ifNum + "end:\n";
+	      String endLabel = "if" + ifNum + "_end:\n";
 	      String code = e1.code + condCheck + s1.code + gotoEnd + elseLabel + s2.code + endLabel;
 	      
 	      StatementOutput _ret = new StatementOutput(code, s2.nextVariableIndex+1);
@@ -567,10 +570,9 @@ public class TranslateToVaporVisitor extends GJDepthFirst<Object, Object>
 	   public Object visit(PrintStatement n, Object argu) {
 		   ExpressionInput input = (ExpressionInput) argu;
 	      ExpressionOutput e = (ExpressionOutput) n.f2.accept(this, input);
-	      String printVariable = "t." + Integer.toString(e.nextVariableIndex);
-	      String line = "PrintIntS(" + printVariable + ")\n";
+	      String line = "PrintIntS(" + e.expressionVariable + ")\n";
 	      String code = e.code + line;
-	      StatementOutput _ret = new StatementOutput(code, e.nextVariableIndex+1);
+	      StatementOutput _ret = new StatementOutput(code, e.nextVariableIndex);
 	      return _ret;
 	   }
 
@@ -647,7 +649,7 @@ public class TranslateToVaporVisitor extends GJDepthFirst<Object, Object>
 		      input.variableTypes = e1.variableTypes;
 		      ExpressionOutput e2 = (ExpressionOutput) n.f2.accept(this, input);
 		      
-		      String expressionVariable = "t" + e2.nextVariableIndex;
+		      String expressionVariable = "t." + e2.nextVariableIndex;
 		      String line1 = expressionVariable + " = Add(" + e1.expressionVariable + " " + e2.expressionVariable + ")\n";
 		      String code = e1.code + e2.code + line1;
 		      
