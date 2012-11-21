@@ -537,7 +537,7 @@ public class TranslateToVaporVisitor extends GJDepthFirst<Object, Object>
 	      String actualAddrVariable = "t." + Integer.toString(e2.nextVariableIndex+1);
 	      
 	      // calculate the address
-	      String line1 = offsetVariable + " = Mul(" + indexVariable + " 4)\n"; 
+	      String line1 = offsetVariable + " = MulS(" + indexVariable + " 4)\n"; 
 	      String line2 = actualAddrVariable + " = Add(" + arrayAddrVariable + " " + offsetVariable + ")\n";
 	      String expressionVariable = "[" + actualAddrVariable + "]";
 	      
@@ -652,7 +652,7 @@ public class TranslateToVaporVisitor extends GJDepthFirst<Object, Object>
 		      ExpressionOutput e2 = (ExpressionOutput) n.f2.accept(this, input);
 		      
 		      String expressionVariable = "t." + e2.nextVariableIndex;
-		      String line1 = expressionVariable + " = Mul(" + e1.expressionVariable + " " + e2.expressionVariable + ")\n";
+		      String line1 = expressionVariable + " = MulS(" + e1.expressionVariable + " " + e2.expressionVariable + ")\n";
 		      String code = e1.code + e2.code + line1;
 		      
 		      ExpressionOutput _ret = new ExpressionOutput(expressionVariable, code, e2.variableTypes, e2.nextVariableIndex+1);
@@ -736,7 +736,7 @@ public class TranslateToVaporVisitor extends GJDepthFirst<Object, Object>
 	      ExpressionOutput e2 = (ExpressionOutput) n.f2.accept(this, input);
 	      
 	      String expressionVariable = "t." + e2.nextVariableIndex;
-	      String line1 = expressionVariable + " = Mul(" + e1.expressionVariable + " " + e2.expressionVariable + ")\n";
+	      String line1 = expressionVariable + " = MulS(" + e1.expressionVariable + " " + e2.expressionVariable + ")\n";
 	      String code = e1.code + e2.code + line1;
 	      
 	      ExpressionOutput _ret = new ExpressionOutput(expressionVariable, code, e2.variableTypes, e2.nextVariableIndex+1);
@@ -773,7 +773,7 @@ public class TranslateToVaporVisitor extends GJDepthFirst<Object, Object>
 	      String boundsLabel = "bounds" + Integer.toString(e2.nextVariableIndex) + ":\n";
 	      
 	      // calculate the address
-	      String assignOffset = offsetVariable + " = Mul(" + indexVariable + " 4)\n"; 
+	      String assignOffset = offsetVariable + " = MulS(" + indexVariable + " 4)\n"; 
 	      String assignAddr = actualAddrVariable + " = Add(" + arrayAddrVariable + " " + offsetVariable + ")\n";
 	      String expressionVariable = "[" + actualAddrVariable + "]";
 	      
@@ -976,7 +976,7 @@ public class TranslateToVaporVisitor extends GJDepthFirst<Object, Object>
 	      String arrayLengthAddrVariable = "t." + Integer.toString(e.nextVariableIndex+1);
 	      String arrayAddrVariable = "t." + Integer.toString(e.nextVariableIndex+2);
 	      
-	      String assignAllocSize = allocSizeVariable + " = Mul(" + e.expressionVariable + " 4)\n"; 
+	      String assignAllocSize = allocSizeVariable + " = MulS(" + e.expressionVariable + " 4)\n"; 
 	      String assignFullAllocSize = allocSizeVariable + " = Add(" + allocSizeVariable + " 4)\n"; // add space for length
 	      String assignArrayLengthAddr = arrayLengthAddrVariable + " = HeapAllocZ(" + allocSizeVariable + ")\n";
 	      String storeLength = "[" + arrayLengthAddrVariable + "] = " + e.expressionVariable + "\n"; 
