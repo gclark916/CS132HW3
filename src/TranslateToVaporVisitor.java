@@ -1,3 +1,4 @@
+import java.util.ArrayList;
 import java.util.Enumeration;
 import java.util.HashMap;
 import java.util.List;
@@ -57,33 +58,43 @@ import visitor.GJDepthFirst;
 public class TranslateToVaporVisitor extends GJDepthFirst<Object, Object> 
 {
 	Map<String, MJClass> classes;
+	
+	/**
+	 * @param classes
+	 */
+	public TranslateToVaporVisitor(Map<String, MJClass> classes) {
+		super();
+		this.classes = classes;
+	}
+
 	//
 	// Auto class visitors--probably don't need to be overridden.
 	//
 	public Object visit(NodeList n, Object argu) 
 	{
-		Object _ret=null;
+		List<Object> _ret=new ArrayList<Object>();
 		int _count=0;
 		for ( Enumeration<Node> e = n.elements(); e.hasMoreElements(); ) 
 		{
-			e.nextElement().accept(this,argu);
+			Object o = e.nextElement().accept(this,argu);
+			_ret.add(o);
 			_count++;
 		}
 		return _ret;
 	}
 
 	   public Object visit(NodeListOptional n, Object argu) {
+		   List<Object> _ret = new ArrayList<Object>();
 	      if ( n.present() ) {
-	         Object _ret=null;
 	         int _count=0;
 	         for ( Enumeration<Node> e = n.elements(); e.hasMoreElements(); ) {
-	            e.nextElement().accept(this,argu);
+	            Object o = e.nextElement().accept(this,argu);
+	            _ret.add(o);
 	            _count++;
 	         }
-	         return _ret;
 	      }
-	      else
-	         return null;
+	      
+	      return _ret;
 	   }
 
 	   public Object visit(NodeOptional n, Object argu) {
@@ -302,13 +313,18 @@ public class TranslateToVaporVisitor extends GJDepthFirst<Object, Object>
 	      Map<String, String> variableTypes = new HashMap<String, String>(input.fields);
 	      
 	      // Add method parameters to map
-	      StringBuilder paramBuilder = new StringBuilder();
-	      for (ParameterOutput p_i : paramList)
+	      String parameters = "this";
+	      if (paramList != null)
 	      {
-	    	  variableTypes.put(p_i.variableName, p_i.type);
-	    	  paramBuilder.append(p_i.variableName);
+		      StringBuilder paramBuilder = new StringBuilder("this");
+		      for (ParameterOutput p_i : paramList)
+		      {
+		    	  variableTypes.put(p_i.variableName, p_i.type);
+		    	  paramBuilder.append(" ");
+		    	  paramBuilder.append(p_i.variableName);
+		      }
+		      parameters = paramBuilder.toString();
 	      }
-	      String parameters = paramBuilder.toString();
 	      
 	      // Add local variables to map
 	      for (VariableDeclarationOutput v_i : variableList)

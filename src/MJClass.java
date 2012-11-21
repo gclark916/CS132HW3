@@ -8,7 +8,7 @@ import java.util.Set;
 
 public class MJClass {
 	public Map<String, MJMethod> methods;	// Map of method name-> Method. Assumes no overloading of method names.
-	public Map<String, String> fields;	// Map of field name -> Type name
+	public Map<String, MJField> fields;	// Map of field name -> Type name
 	public String name;
 	public MJClass parentClass;
 	
@@ -18,7 +18,7 @@ public class MJClass {
 	 * @param name
 	 * @param parentClass
 	 */
-	public MJClass(Map<String, MJMethod> methods, Map<String, String> fields,
+	public MJClass(Map<String, MJMethod> methods, Map<String, MJField> fields,
 			String name, MJClass parentClass) {
 		super();
 		this.methods = methods;
@@ -29,7 +29,7 @@ public class MJClass {
 		this.fields = fields;
 		if (this.fields == null)
 		{
-			this.fields = new HashMap<String, String>();
+			this.fields = new HashMap<String, MJField>();
 		}
 		this.name = name;
 		this.parentClass = parentClass;
