@@ -333,11 +333,15 @@ public class TranslateToVaporVisitor extends GJDepthFirst<Object, Object>
 	   public Object visit(MethodDeclaration n, Object argu) {
 		   MethodInput input = (MethodInput) argu;
 	      String methodName = n.f2.f0.tokenImage;
-	      List<ParameterOutput> paramList = (List<ParameterOutput>) n.f4.accept(this, argu);
-	      List<VariableDeclarationOutput> variableList = (List<VariableDeclarationOutput>) n.f7.accept(this, argu);
+	      
+	      ExpressionInput tempInput = new ExpressionInput(input.nextVariableIndex, null); 
+	      List<ParameterOutput> paramList = (List<ParameterOutput>) n.f4.accept(this, tempInput);
+	      List<VariableDeclarationOutput> variableList = (List<VariableDeclarationOutput>) n.f7.accept(this, tempInput);
 	      
 	      // Build map of variable name -> type, starting with class fields
 	      Map<String, String> variableTypes = new HashMap<String, String>(input.fields);
+	      // Add the this type to map
+	      variableTypes.put("this", input.className);
 	      
 	      // Add method parameters to map
 	      String parameters = "";
@@ -496,6 +500,7 @@ public class TranslateToVaporVisitor extends GJDepthFirst<Object, Object>
 	    * f2 -> Expression()
 	    * f3 -> ";"
 	    */
+	   //TODO: check if identifier is local var or class field
 	   public Object visit(AssignmentStatement n, Object argu) {
 		   ExpressionInput input = (ExpressionInput) argu;
 		  String variable = n.f0.f0.tokenImage;
@@ -517,6 +522,7 @@ public class TranslateToVaporVisitor extends GJDepthFirst<Object, Object>
 	    * f5 -> Expression()
 	    * f6 -> ";"
 	    */
+	 //TODO: check if identifier is local var or class field
 	   public Object visit(ArrayAssignmentStatement n, Object argu) {
 		   ExpressionInput input = (ExpressionInput) argu;
 		  String arrayAddrVariable = n.f0.f0.tokenImage;
@@ -754,17 +760,26 @@ public class TranslateToVaporVisitor extends GJDepthFirst<Object, Object>
 	      
 	      String arrayAddrVariable = e1.expressionVariable;
 	      String indexVariable = e2.expressionVariable;
-	      String offsetVariable = "t." + Integer.toString(e2.nextVariableIndex);
-	      String actualAddrVariable = "t." + Integer.toString(e2.nextVariableIndex+1);
+	      String boundsVar = "t." + Integer.toString(e2.nextVariableIndex);
+	      String offsetVariable = "t." + Integer.toString(e2.nextVariableIndex+1);
+	      String actualAddrVariable = "t." + Integer.toString(e2.nextVariableIndex+2);
+	      
+	      // Check bounds
+	      String assignArrayLength = boundsVar + " = [" + arrayAddrVariable + "-4]\n";
+	      String assignCheckValue = boundsVar + " = Sub(" + boundsVar + " 1)\n";
+	      String assignCheckBool = boundsVar + " = LtS(" + boundsVar + " " + indexVariable + ")\n";
+	      String ifStmt = "if0 " + boundsVar + " goto :bounds" + Integer.toString(e2.nextVariableIndex) + "\n";
+	      String error = "Error(\"array index out of bounds\")\n";
+	      String boundsLabel = "bounds" + Integer.toString(e2.nextVariableIndex) + ":\n";
 	      
 	      // calculate the address
-	      String line1 = offsetVariable + " = Mul(" + indexVariable + " 4)\n"; 
-	      String line2 = actualAddrVariable + " = Add(" + arrayAddrVariable + " " + offsetVariable + ")\n";
+	      String assignOffset = offsetVariable + " = Mul(" + indexVariable + " 4)\n"; 
+	      String assignAddr = actualAddrVariable + " = Add(" + arrayAddrVariable + " " + offsetVariable + ")\n";
 	      String expressionVariable = "[" + actualAddrVariable + "]";
 	      
-	      String code = e1.code + e2.code + line1 + line2;
+	      String code = e1.code + e2.code + assignArrayLength + assignCheckValue + assignCheckBool + ifStmt + error + boundsLabel + assignOffset + assignAddr;
 	      
-	      ExpressionOutput _ret = new ExpressionOutput(expressionVariable, code, e2.variableTypes, e2.nextVariableIndex+2);
+	      ExpressionOutput _ret = new ExpressionOutput(expressionVariable, code, e2.variableTypes, e2.nextVariableIndex+3);
 	      return _ret;
 	   }
 
@@ -894,6 +909,7 @@ public class TranslateToVaporVisitor extends GJDepthFirst<Object, Object>
 	    *       | NotExpression()
 	    *       | BracketExpression()
 	    */
+	   //TODO: may want a special case on identifier to check if its a local var or a class field
 	   public Object visit(PrimaryExpression n, Object argu) {
 		   ExpressionInput input = (ExpressionInput) argu;
 	      ExpressionOutput _ret = (ExpressionOutput) n.f0.accept(this, input);
@@ -960,11 +976,13 @@ public class TranslateToVaporVisitor extends GJDepthFirst<Object, Object>
 	      String arrayLengthAddrVariable = "t." + Integer.toString(e.nextVariableIndex+1);
 	      String arrayAddrVariable = "t." + Integer.toString(e.nextVariableIndex+2);
 	      
-	      String assignAllocSize = allocSizeVariable + " = Add(" + e.expressionVariable + " 4)\n"; 
+	      String assignAllocSize = allocSizeVariable + " = Mul(" + e.expressionVariable + " 4)\n"; 
+	      String assignFullAllocSize = allocSizeVariable + " = Add(" + allocSizeVariable + " 4)\n"; // add space for length
 	      String assignArrayLengthAddr = arrayLengthAddrVariable + " = HeapAllocZ(" + allocSizeVariable + ")\n";
+	      String storeLength = "[" + arrayLengthAddrVariable + "] = " + e.expressionVariable + "\n"; 
 	      String assignArrayAddr = arrayAddrVariable + " = Add(" + arrayLengthAddrVariable + " 4)\n";
 	      
-	      String code = e.code + assignAllocSize + assignArrayLengthAddr + assignArrayAddr;
+	      String code = e.code + assignAllocSize + assignFullAllocSize + assignArrayLengthAddr + storeLength + assignArrayAddr;
 	      ExpressionOutput _ret = new ExpressionOutput(arrayAddrVariable, code, e.variableTypes, e.nextVariableIndex+3);
 	      return _ret;
 	   }
