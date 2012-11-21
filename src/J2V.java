@@ -1,5 +1,3 @@
-import java.io.FileInputStream;
-import java.io.FileNotFoundException;
 import java.util.HashMap;
 import java.util.Map;
 
@@ -10,8 +8,6 @@ public class J2V {
 	public static void main(String [] args) 
 	{
 		try {
-			FileInputStream fileInput = new FileInputStream("test/test10.java");
-			System.setIn(fileInput);
 			Node root = new MiniJavaParser(System.in).Goal();
 
 			PopulateClassesVisitor firstPass = new PopulateClassesVisitor();
@@ -27,9 +23,6 @@ public class J2V {
 		catch (ParseException e) 
 		{
 			System.out.println(e.toString());
-		} catch (FileNotFoundException e) {
-			// TODO Auto-generated catch block
-			e.printStackTrace();
 		}
 	}
 

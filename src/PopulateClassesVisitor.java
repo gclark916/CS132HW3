@@ -35,12 +35,10 @@ public class PopulateClassesVisitor extends GJDepthFirst<Object, Object> {
 	public Object visit(NodeList n, Object argu) 
 	{
 		List<Object> _ret=new ArrayList<Object>();
-		int _count=0;
 		for ( Enumeration<Node> e = n.elements(); e.hasMoreElements(); ) 
 		{
 			Object o = e.nextElement().accept(this,argu);
 			_ret.add(o);
-			_count++;
 		}
 		return _ret;
 	}
@@ -48,11 +46,9 @@ public class PopulateClassesVisitor extends GJDepthFirst<Object, Object> {
 	   public Object visit(NodeListOptional n, Object argu) {
 		   List<Object> _ret = new ArrayList<Object>();
 	      if ( n.present() ) {
-	         int _count=0;
 	         for ( Enumeration<Node> e = n.elements(); e.hasMoreElements(); ) {
 	            Object o = e.nextElement().accept(this,argu);
 	            _ret.add(o);
-	            _count++;
 	         }
 	      }
 	      
@@ -68,10 +64,8 @@ public class PopulateClassesVisitor extends GJDepthFirst<Object, Object> {
 
 	   public Object visit(NodeSequence n, Object argu) {
 	      Object _ret=null;
-	      int _count=0;
 	      for ( Enumeration<Node> e = n.elements(); e.hasMoreElements(); ) {
 	         e.nextElement().accept(this,argu);
-	         _count++;
 	      }
 	      return _ret;
 	   }

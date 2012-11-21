@@ -77,7 +77,6 @@ public class TranslateToVaporVisitor extends GJDepthFirst<Object, Object>
 	public Object visit(NodeList n, Object argu) 
 	{
 		List<Object> _ret=new ArrayList<Object>();
-		int _count=0;
 		for ( Enumeration<Node> e = n.elements(); e.hasMoreElements(); ) 
 		{
 			Object o = e.nextElement().accept(this,argu);
@@ -90,7 +89,6 @@ public class TranslateToVaporVisitor extends GJDepthFirst<Object, Object>
             	}
             }
 			_ret.add(o);
-			_count++;
 		}
 		return _ret;
 	}
@@ -98,7 +96,6 @@ public class TranslateToVaporVisitor extends GJDepthFirst<Object, Object>
 	   public Object visit(NodeListOptional n, Object argu) {
 		   List<Object> _ret = new ArrayList<Object>();
 	      if ( n.present() ) {
-	         int _count=0;
 	         for ( Enumeration<Node> e = n.elements(); e.hasMoreElements(); ) {
 	            Object o = e.nextElement().accept(this,argu);
 	            if (Input.class.isInstance(argu) && Output.class.isInstance(o))
@@ -110,7 +107,6 @@ public class TranslateToVaporVisitor extends GJDepthFirst<Object, Object>
 	            	}
 	            }
 	            _ret.add(o);
-	            _count++;
 	         }
 	      }
 	      
@@ -126,7 +122,6 @@ public class TranslateToVaporVisitor extends GJDepthFirst<Object, Object>
 
 	   public Object visit(NodeSequence n, Object argu) {
 		   List<Object> _ret = new ArrayList<Object>();
-	      int _count=0;
 	      for ( Enumeration<Node> e = n.elements(); e.hasMoreElements(); ) {
 	         Object o = e.nextElement().accept(this,argu);
 	         if (Input.class.isInstance(argu) && Output.class.isInstance(o))
@@ -137,7 +132,6 @@ public class TranslateToVaporVisitor extends GJDepthFirst<Object, Object>
 	            		((ExpressionInput) argu).variableTypes = ((ExpressionOutput) o).variableTypes;
 	            	}
 	            }
-	         _count++;
 	      }
 	      return _ret;
 	   }
@@ -286,7 +280,6 @@ public class TranslateToVaporVisitor extends GJDepthFirst<Object, Object>
 			  }
 			  String methodTable = methodTableBuilder.toString();
 		      
-		      // TODO: change methodinput
 		      MethodInput methodInput = new MethodInput(input.nextVariableIndex, classes.get(className));
 		      List<MethodOutput> methods = (List<MethodOutput>) methodsNode.accept(this, methodInput);
 		      StringBuilder methodBuilder = new StringBuilder();
@@ -511,7 +504,6 @@ public class TranslateToVaporVisitor extends GJDepthFirst<Object, Object>
 	    * f2 -> Expression()
 	    * f3 -> ";"
 	    */
-	   //TODO: check if identifier is local var or class field - DONE
 	   public Object visit(AssignmentStatement n, Object argu) {
 		   ExpressionInput input = (ExpressionInput) argu;
 		  String variable = n.f0.f0.tokenImage;
@@ -538,7 +530,6 @@ public class TranslateToVaporVisitor extends GJDepthFirst<Object, Object>
 	    * f5 -> Expression()
 	    * f6 -> ";"
 	    */
-	 //TODO: check if identifier is local var or class field - DONE
 	   public Object visit(ArrayAssignmentStatement n, Object argu) {
 		   ExpressionInput input = (ExpressionInput) argu;
 		  if (!input.localVariables.contains(n.f0.f0.tokenImage))
@@ -927,7 +918,6 @@ public class TranslateToVaporVisitor extends GJDepthFirst<Object, Object>
 	    *       | NotExpression()
 	    *       | BracketExpression()
 	    */
-	   //TODO: may want a special case on identifier to check if its a local var or a class field - DONE
 	   public Object visit(PrimaryExpression n, Object argu) {
 		   ExpressionInput input = (ExpressionInput) argu;
 		   if (Identifier.class.isInstance(n.f0.choice))
@@ -1001,26 +991,11 @@ public class TranslateToVaporVisitor extends GJDepthFirst<Object, Object>
 	    * f3 -> Expression()
 	    * f4 -> "]"
 	    */
-	   //TODO: changing allocation scheme
 	   public Object visit(ArrayAllocationExpression n, Object argu) {
 		   this.allocArray = true;
 		   ExpressionInput input = (ExpressionInput) argu;
 	      ExpressionOutput e = (ExpressionOutput) n.f3.accept(this, input);
 	      
-	      /*String allocSizeVariable = "t." + Integer.toString(e.nextVariableIndex);
-	      String arrayLengthAddrVariable = "t." + Integer.toString(e.nextVariableIndex+1);
-	      String arrayAddrVariable = "t." + Integer.toString(e.nextVariableIndex+2);
-	      
-	      String assignAllocSize = allocSizeVariable + " = MulS(" + e.expressionVariable + " 4)\n"; 
-	      String assignFullAllocSize = allocSizeVariable + " = Add(" + allocSizeVariable + " 4)\n"; // add space for length
-	      String assignArrayLengthAddr = arrayLengthAddrVariable + " = HeapAllocZ(" + allocSizeVariable + ")\n";
-	      String nullCheck = "if " + arrayLengthAddrVariable + " goto :null" + input.nextVariableIndex + "\n";
-	      String error = "Error(\"null pointer\")\n";
-	      String endCheck = "null" + input.nextVariableIndex + ":\n";
-	      String storeLength = "[" + arrayLengthAddrVariable + "] = " + e.expressionVariable + "\n"; 
-	      String assignArrayAddr = arrayAddrVariable + " = Add(" + arrayLengthAddrVariable + " 4)\n";
-	      
-	      String code = e.code + assignAllocSize + assignFullAllocSize + assignArrayLengthAddr + nullCheck + error + endCheck + storeLength + assignArrayAddr;*/
 	      String arrayVariable = "t." + Integer.toString(e.nextVariableIndex);
 	      String code = arrayVariable + " = call :AllocArray(" + e.expressionVariable + ")\n"; 
 	      ExpressionOutput _ret = new ExpressionOutput(arrayVariable, code, e.variableTypes, e.nextVariableIndex+1);
