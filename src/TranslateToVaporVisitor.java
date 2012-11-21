@@ -519,7 +519,7 @@ public class TranslateToVaporVisitor extends GJDepthFirst<Object, Object>
 		  String variable = n.f0.f0.tokenImage;
 		  if (!input.localVariables.contains(variable))
 		  {
-			  MJField field = input.currentClass.fields.get(variable);
+			  MJField field = input.currentClass.getFields().get(variable);
 			  variable = "[this+" + Integer.toString(field.index*4) + "]";
 		  }
 	      ExpressionOutput e = (ExpressionOutput) n.f2.accept(this, input);
@@ -546,7 +546,7 @@ public class TranslateToVaporVisitor extends GJDepthFirst<Object, Object>
 		  String arrayAddrVariable = n.f0.f0.tokenImage;
 		  if (!input.localVariables.contains(arrayAddrVariable))
 		  {
-			  MJField field = input.currentClass.fields.get(arrayAddrVariable);
+			  MJField field = input.currentClass.getFields().get(arrayAddrVariable);
 			  arrayAddrVariable = "[this+" + Integer.toString(field.index*4) + "]";
 		  }
 		  ExpressionOutput e1 = (ExpressionOutput) n.f2.accept(this, input);
@@ -939,10 +939,11 @@ public class TranslateToVaporVisitor extends GJDepthFirst<Object, Object>
 			   String variable = ((Identifier) n.f0.choice).f0.tokenImage;
 			   if (!input.localVariables.contains(variable))
 			   {
-				   MJField field = input.currentClass.fields.get(variable);
+				   MJField field = input.currentClass.getFields().get(variable);
 				   variable = "[this+" + Integer.toString(field.index*4) + "]";
 				   String expressionVariable = "t." + Integer.toString(input.nextVariableIndex);
 				   String code = expressionVariable + " = " + variable + "\n";
+				   input.variableTypes.put(expressionVariable, field.type);
 				   return new ExpressionOutput(expressionVariable, code, input.variableTypes, input.nextVariableIndex+1);
 			   }
 			   
